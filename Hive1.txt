@@ -1,0 +1,577 @@
+#####Going in hive mode...
+[cloudera@quickstart ~]$ hive
+
+Logging initialized using configuration in file:/etc/hive/conf.dist/hive-log4j.properties
+WARNING: Hive CLI is deprecated and migration to Beeline is recommended.
+
+#####Available databases in hive mode...
+hive> show databases;
+OK
+default
+hive_tutorial
+hive_tutorial_new
+sample_db
+sample_db_again
+sample_db_new
+Time taken: 0.68 seconds, Fetched: 6 row(s)
+
+#####Droping/Removing a database in hive mode...
+hive> drop database hive_tutorial;
+OK
+Time taken: 1.741 seconds
+
+#####Verifying if a database is dropped in hive mode...
+hive> show databases;
+OK
+default
+hive_tutorial_new
+sample_db
+sample_db_again
+sample_db_new
+Time taken: 0.034 seconds, Fetched: 5 row(s)
+
+#####Creating a database with default structure in hive mode...
+hive> Create database hive_tutorial;
+OK
+Time taken: 0.282 seconds
+
+#####Describing the database in hive mode...
+hive> describe database hive_tutorial;
+OK
+hive_tutorial		hdfs://quickstart.cloudera:8020/user/hive/warehouse/hive_tutorial.db	cloudera	USER	
+Time taken: 0.015 seconds, Fetched: 1 row(s)
+
+#####Creating a database schema with some comments n dbproperties and default structure from hdfs in hive mode...
+hive> create database sample_db_again
+    > comment 'This is my sample database'
+    > location '/user/hive/sample'
+    > with dbproperties(
+    > 'Creator'='Vishal',
+    > 'Location'='US')
+    > ;
+OK
+Time taken: 0.038 seconds
+
+hive> describe database extended sample_db_again;
+OK
+sample_db_again	This is my sample database	hdfs://quickstart.cloudera:8020/user/hive/sample	cloudera	USER	{Creator=Vishal, Location=US}
+Time taken: 0.009 seconds, Fetched: 1 row(s)
+
+
+[cloudera@quickstart ~]$ sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table customers --target-dir /user/cloudera/mydir/delimited --fields-terminated-by '|'
+
+
+#####Creating a in hive as a text file...
+hive> create table customersHive
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile;
+OK
+Time taken: 0.293 seconds
+
+hive> describe formatted customershive;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 11:31:16 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1595097076          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	|                   
+	serialization.format	|                   
+Time taken: 0.103 seconds, Fetched: 29 row(s)
+
+#####Loading data from to table default.customershive from HDFS text file ...
+hive> load data inpath '/user/cloudera/mydir/delimited' overwrite into table customershive;
+Loading data to table default.customershive
+chgrp: changing ownership of 'hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive': User does not belong to supergroup
+Table default.customershive stats: [numFiles=4, numRows=0, totalSize=953525, rawDataSize=0]
+OK
+Time taken: 0.846 seconds
+hive> select * from customershive limit 10;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+........
+
+Time taken: 0.406 seconds, Fetched: 10 row(s)
+
+#####Loading data deletes data from HDFS and stores in hive ...
+[cloudera@quickstart ~]$ hdfs dfs -ls /user/cloudera/mydir/delimited
+ls: `/user/cloudera/mydir/delimited': No such file or directory
+[cloudera@quickstart ~]$ hdfs dfs -ls hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive
+Found 5 items
+-rwxrwxrwx   1 cloudera cloudera          0 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/_SUCCESS
+-rwxrwxrwx   1 cloudera cloudera     237145 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00000
+-rwxrwxrwx   1 cloudera cloudera     237965 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00001
+-rwxrwxrwx   1 cloudera cloudera     238092 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00002
+-rwxrwxrwx   1 cloudera cloudera     240323 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00003
+[cloudera@quickstart ~]$ hdfs dfs -ls hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive
+ls: `hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive': No such file or directory
+
+
+hive> create external table externalhivecustomers
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile;
+OK
+Time taken: 0.095 seconds
+hive> describe formatted externalhivecustomers;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 11:49:37 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/externalhivecustomers	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	EXTERNAL            	TRUE                
+	transient_lastDdlTime	1595098177          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	|                   
+	serialization.format	|                   
+Time taken: 0.135 seconds, Fetched: 30 row(s)
+
+hive> load data inpath '/user/cloudera/mydir/delimited' overwrite into table externalhivecustomers;
+Loading data to table default.externalhivecustomers
+chgrp: changing ownership of 'hdfs://quickstart.cloudera:8020/user/hive/warehouse/externalhivecustomers': User does not belong to supergroup
+Table default.externalhivecustomers stats: [numFiles=4, numRows=0, totalSize=953525, rawDataSize=0]
+OK
+Time taken: 0.323 seconds
+hive> select * from externalhivecustomers limit 10;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+4	Mary	Jones
+5	Robert	Hudson
+6	Mary	Smith
+7	Melissa	Wilcox
+8	Megan	Smith
+9	Mary	Perez
+10	Melissa	Smith
+Time taken: 0.085 seconds, Fetched: 10 row(s)
+hive> describe formatted externalhivecustomers;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 11:49:37 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/externalhivecustomers	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	true                
+	EXTERNAL            	TRUE                
+	numFiles            	4                   
+	numRows             	0                   
+	rawDataSize         	0                   
+	totalSize           	953525              
+	transient_lastDdlTime	1595098422          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	|                   
+	serialization.format	|                   
+Time taken: 0.16 seconds, Fetched: 35 row(s)
+hive> drop table externalhivecustomers;
+OK
+Time taken: 0.114 seconds
+hive> show tables;
+OK
+customer_mysql
+customers_defaulrschma
+customers_selflocation
+customers_text
+Time taken: 0.02 seconds, Fetched: 4 row(s)
+hive> show databases;
+OK
+default
+hive_tutorial
+sample_db_again
+smaple_db
+Time taken: 0.009 seconds, Fetched: 4 row(s)
+
+
+#####Creating a database schema from a text file stored in hdfs...
+hive> create external table customersText
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile;
+OK
+Time taken: 0.13 seconds
+hive> load data local inpath '/home/cloudera/customers.txt' overwrite into table customerstext;
+Loading data to table default.customerstext
+Table default.customerstext stats: [numFiles=1, numRows=0, totalSize=29, rawDataSize=0]
+OK
+Time taken: 0.631 seconds
+hive> select * from customerstext limit 10;
+OK
+1	Sarah	Wang
+2	John	Mark
+Time taken: 0.066 seconds, Fetched: 2 row(s)
+
+#####Creating a database schema from hdfs location with data...
+hive> create table customersloc
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile
+    > location '/user/cloudera/mydir/delimited';
+OK
+Time taken: 0.07 seconds
+hive> select * from customersloc limit 10;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+4	Mary	Jones
+5	Robert	Hudson
+6	Mary	Smith
+7	Melissa	Wilcox
+8	Megan	Smith
+9	Mary	Perez
+10	Melissa	Smith
+Time taken: 0.071 seconds, Fetched: 10 row(s)
+hive> create table customers_default
+    > (id int, fname string, lname string);
+OK
+Time taken: 0.09 seconds
+hive> describe formatted customers_default;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 12:16:15 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_default	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1595099775          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+Time taken: 0.075 seconds, Fetched: 28 row(s)
+hive> select * from customers_default limit 10;
+OK
+Time taken: 0.078 seconds
+hive> show tables;
+OK
+customer_mysql
+customers_defaulrschma
+customers_default
+customers_selflocation
+customersloc
+customerstext
+Time taken: 0.015 seconds, Fetched: 6 row(s)
+hive> select * from customer_mysql;
+OK
+1	Richard	Hernandez	XXXXXXXXX	XXXXXXXXX	6303 Heather Plaza	Brownsville	TX	78521
+2	Mary	Barrett	XXXXXXXXX	XXXXXXXXX	9526 Noble Embers Ridge	Littleton	CO	80126
+
+12434	Mary	Mills	XXXXXXXXX	XXXXXXXXX	9720 Colonial Parade	Caguas	PR	00725
+12435	Laura	Horton	XXXXXXXXX	XXXXXXXXX	5736 Honey Downs	Summerville	SC	29483
+Time taken: 0.088 seconds, Fetched: 12435 row(s)
+hive> show tables;
+OK
+customer_mysql
+customers_defaulrschma
+customers_default
+customers_selflocation
+customersloc
+customerstext
+Time taken: 0.024 seconds, Fetched: 6 row(s)
+hive> select * from customers_defaulrschema;
+FAILED: SemanticException [Error 10001]: Line 1:14 Table not found 'customers_defaulrschema'
+hive> select * from customers_defaulrschma;
+OK
+37	Virginia	Conrad	NULL	NULL
+41	Victoria	Mason	NULL	NULL
+
+42	Jim	Fernendas	NULL	NULL
+Time taken: 0.073 seconds, Fetched: 96 row(s)
+
+hive> insert into customers_default select id, fname, lname from customers_defaulrschma where fname like 'V%';
+Query ID = cloudera_20200718124646_093df2c5-0966-4add-b771-aff3de8bb771
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595092172149_0004, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595092172149_0004/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595092172149_0004
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2020-07-18 12:46:32,300 Stage-1 map = 0%,  reduce = 0%
+2020-07-18 12:46:43,563 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 2.44 sec
+MapReduce Total cumulative CPU time: 2 seconds 440 msec
+Ended Job = job_1595092172149_0004
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_default/.hive-staging_hive_2020-07-18_12-46-19_091_374778076553602296-1/-ext-10000
+Loading data to table default.customers_default
+Table default.customers_default stats: [numFiles=1, numRows=95, totalSize=1953, rawDataSize=1858]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 2.44 sec   HDFS Read: 6514 HDFS Write: 2036 SUCCESS
+Total MapReduce CPU Time Spent: 2 seconds 440 msec
+OK
+Time taken: 26.005 seconds
+hive> select * from customers_default;
+OK
+37	Virginia	Conrad
+41	Victoria	Mason
+
+12256	Victoria	Alvarez
+12355	Victoria	Smith
+Time taken: 0.076 seconds, Fetched: 95 row(s)
+hive> insert into customers_default values('Vishal','Kumar');
+FAILED: SemanticException [Error 10044]: Line 1:12 Cannot insert into target table because column number/types are different 'customers_default': Table insclause-0 has 3 columns, but query has 2 columns.
+hive> insert into customers_default values(12356,'Vishal','Kumar');
+Query ID = cloudera_20200718124949_03dbabab-e9ee-4a97-aae1-f0d3faa7a878
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595092172149_0005, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595092172149_0005/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595092172149_0005
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2020-07-18 12:49:27,196 Stage-1 map = 0%,  reduce = 0%
+2020-07-18 12:49:37,314 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 2.23 sec
+MapReduce Total cumulative CPU time: 2 seconds 230 msec
+Ended Job = job_1595092172149_0005
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_default/.hive-staging_hive_2020-07-18_12-49-15_875_2819008673791325344-1/-ext-10000
+Loading data to table default.customers_default
+Table default.customers_default stats: [numFiles=2, numRows=96, totalSize=1972, rawDataSize=1876]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 2.23 sec   HDFS Read: 4182 HDFS Write: 100 SUCCESS
+Total MapReduce CPU Time Spent: 2 seconds 230 msec
+OK
+Time taken: 23.971 seconds
+hive> alter table customers_default
+    > add columns (email string, phone string);
+OK
+Time taken: 0.205 seconds
+
+hive> describe customers_default;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email               	string              	                    
+phone               	string              	                    
+Time taken: 0.081 seconds, Fetched: 5 row(s)
+hive> select * from customers_default;
+OK
+37	Virginia	Conrad	NULL	NULL
+41	Victoria	Mason	NULL	NULL
+
+12355	Victoria	Smith	NULL	NULL
+12356	Vishal	Kumar	NULL	NULL
+Time taken: 0.073 seconds, Fetched: 96 row(s)
+hive> alter table customers_default
+    > change column email email_id string;
+OK
+Time taken: 0.125 seconds
+hive> select * from customers_default limit 10;
+OK
+37	Virginia	Conrad	NULL	NULL
+41	Victoria	Mason	NULL	NULL
+96	Virginia	Smith	NULL	NULL
+191	Victoria	Smith	NULL	NULL
+460	Vincent	Willis	NULL	NULL
+902	Virginia	Smith	NULL	NULL
+905	Virginia	Smith	NULL	NULL
+932	Virginia	Sandoval	NULL	NULL
+977	Virginia	Smith	NULL	NULL
+1028	Virginia	Sanders	NULL	NULL
+Time taken: 0.08 seconds, Fetched: 10 row(s)
+hive> describe customers_default;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+Time taken: 0.13 seconds, Fetched: 5 row(s)
+hive> alter table customers_default rename to customersDefault;
+OK
+Time taken: 0.148 seconds
+hive> describe customersdefault;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+Time taken: 0.117 seconds, Fetched: 5 row(s)
+hive> show tblproperties customersdefault;
+OK
+COLUMN_STATS_ACCURATE	false
+last_modified_by	cloudera
+last_modified_time	1595103131
+numFiles	2
+numRows	-1
+rawDataSize	-1
+totalSize	1972
+transient_lastDdlTime	1595103131
+Time taken: 0.044 seconds, Fetched: 8 row(s)
+hive> alter table customersDefault
+    > set tblproperties('location'='bihar');
+OK
+Time taken: 0.101 seconds
+hive> show tblproperties customersdefault;
+OK
+COLUMN_STATS_ACCURATE	false
+last_modified_by	cloudera
+last_modified_time	1595103385
+location	bihar
+numFiles	2
+numRows	-1
+rawDataSize	-1
+totalSize	1972
+transient_lastDdlTime	1595103385
+Time taken: 0.043 seconds, Fetched: 9 row(s)
+hive> alter table customersDefault
+    > set fileformat parquetfile;
+OK
+Time taken: 0.2 seconds
+hive> describe formatted customersdefault;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 12:16:15 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/customersDefault	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	false               
+	last_modified_by    	cloudera            
+	last_modified_time  	1595103536          
+	location            	bihar               
+	numFiles            	2                   
+	numRows             	-1                  
+	rawDataSize         	-1                  
+	totalSize           	1972                
+	transient_lastDdlTime	1595103536          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+Time taken: 0.098 seconds, Fetched: 38 row(s)
+
+hive> describe customersdefault;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+Time taken: 0.086 seconds, Fetched: 5 row(s)
+
+#####Alter table...
+hive> alter table customersDefault change column fname cust_fname string;
+OK
+Time taken: 0.16 seconds
+hive> alter table customersDefault change column lname cust_lname string;
+OK
+Time taken: 0.161 seconds
+hive> alter table customersDefault replace columns(cust_fname string, cust_lname string);
+OK
+Time taken: 0.126 seconds
+
+hive> alter table customersDefault set location '/user/customers/parquet';
+OK
+Time taken: 0.455 seconds
+
