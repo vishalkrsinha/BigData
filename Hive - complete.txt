@@ -1,0 +1,2057 @@
+#####Going in hive mode...
+[cloudera@quickstart ~]$ hive
+
+Logging initialized using configuration in file:/etc/hive/conf.dist/hive-log4j.properties
+WARNING: Hive CLI is deprecated and migration to Beeline is recommended.
+
+#####Available databases in hive mode...
+hive> show databases;
+OK
+default
+hive_tutorial
+hive_tutorial_new
+sample_db
+sample_db_again
+sample_db_new
+Time taken: 0.68 seconds, Fetched: 6 row(s)
+
+#####Droping/Removing a database in hive mode...
+hive> drop database hive_tutorial;
+OK
+Time taken: 1.741 seconds
+
+#####Creating a database with default structure in hive mode...
+hive> Create database hive_tutorial;
+OK
+Time taken: 0.282 seconds
+
+#####Describing the database in hive mode...
+hive> describe database hive_tutorial;
+OK
+hive_tutorial		hdfs://quickstart.cloudera:8020/user/hive/warehouse/hive_tutorial.db	cloudera	USER	
+Time taken: 0.015 seconds, Fetched: 1 row(s)
+
+#####Creating a database schema with some comments n dbproperties and default structure from hdfs in hive mode...
+hive> create database sample_db_again
+    > comment 'This is my sample database'
+    > location '/user/hive/sample'
+    > with dbproperties(
+    > 'Creator'='Vishal',
+    > 'Location'='US')
+    > ;
+OK
+Time taken: 0.038 seconds
+
+#####Describing the database in extended form in hive mode...
+hive> describe database extended sample_db_again;
+OK
+sample_db_again	This is my sample database	hdfs://quickstart.cloudera:8020/user/hive/sample	cloudera	USER	{Creator=Vishal, Location=US}
+Time taken: 0.009 seconds, Fetched: 1 row(s)
+
+
+[cloudera@quickstart ~]$ sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table customers --target-dir /user/cloudera/mydir/delimited --fields-terminated-by '|'
+
+#####Creating a table in hive and to store as a text file...
+hive> create table customersHive
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile;
+OK
+Time taken: 0.293 seconds
+
+#####Describing the database in formatted(Detailed) form in hive mode...
+hive> describe formatted customershive;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 11:31:16 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1595097076          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	|                   
+	serialization.format	|                   
+Time taken: 0.103 seconds, Fetched: 29 row(s)
+
+#####Loading data from HDFS text file to a table default.customershive ...
+hive> load data inpath '/user/cloudera/mydir/delimited' overwrite into table customershive;
+Loading data to table default.customershive
+chgrp: changing ownership of 'hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive': User does not belong to supergroup
+Table default.customershive stats: [numFiles=4, numRows=0, totalSize=953525, rawDataSize=0]
+OK
+Time taken: 0.846 seconds
+hive> select * from customershive limit 10;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+........
+
+Time taken: 0.406 seconds, Fetched: 10 row(s)
+
+#####Loading data deletes data from HDFS and stores in hive ...
+[cloudera@quickstart ~]$ hdfs dfs -ls /user/cloudera/mydir/delimited
+ls: `/user/cloudera/mydir/delimited': No such file or directory
+[cloudera@quickstart ~]$ hdfs dfs -ls hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive
+Found 5 items
+-rwxrwxrwx   1 cloudera cloudera          0 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/_SUCCESS
+-rwxrwxrwx   1 cloudera cloudera     237145 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00000
+-rwxrwxrwx   1 cloudera cloudera     237965 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00001
+-rwxrwxrwx   1 cloudera cloudera     238092 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00002
+-rwxrwxrwx   1 cloudera cloudera     240323 2020-07-18 11:29 hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive/part-m-00003
+[cloudera@quickstart ~]$ hdfs dfs -ls hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive
+ls: `hdfs://quickstart.cloudera:8020/user/hive/warehouse/customershive': No such file or directory
+
+#####Creating external table allows to delete the schema in Hive but not the table in HDFS while Loading operation ...
+hive> create external table externalhivecustomers
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile;
+OK
+Time taken: 0.095 seconds
+hive> describe formatted externalhivecustomers;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 11:49:37 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/externalhivecustomers	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	EXTERNAL            	TRUE                
+	transient_lastDdlTime	1595098177          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	|                   
+	serialization.format	|                   
+Time taken: 0.135 seconds, Fetched: 30 row(s)
+
+#####Loading an external table allows to delete the schema in Hive but not the table in HDFS ...
+hive> load data inpath '/user/cloudera/mydir/delimited' overwrite into table externalhivecustomers;
+Loading data to table default.externalhivecustomers
+chgrp: changing ownership of 'hdfs://quickstart.cloudera:8020/user/hive/warehouse/externalhivecustomers': User does not belong to supergroup
+Table default.externalhivecustomers stats: [numFiles=4, numRows=0, totalSize=953525, rawDataSize=0]
+OK
+Time taken: 0.323 seconds
+hive> select * from externalhivecustomers limit 10;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+4	Mary	Jones
+5	Robert	Hudson
+6	Mary	Smith
+7	Melissa	Wilcox
+8	Megan	Smith
+9	Mary	Perez
+10	Melissa	Smith
+Time taken: 0.085 seconds, Fetched: 10 row(s)
+hive> describe formatted externalhivecustomers;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 11:49:37 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/externalhivecustomers	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	true                
+	EXTERNAL            	TRUE                
+	numFiles            	4                   
+	numRows             	0                   
+	rawDataSize         	0                   
+	totalSize           	953525              
+	transient_lastDdlTime	1595098422          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	|                   
+	serialization.format	|                   
+Time taken: 0.16 seconds, Fetched: 35 row(s)
+hive> drop table externalhivecustomers;
+OK
+Time taken: 0.114 seconds
+hive> show tables;
+OK
+customer_mysql
+customers_defaulrschma
+customers_selflocation
+customers_text
+Time taken: 0.02 seconds, Fetched: 4 row(s)
+hive> show databases;
+OK
+default
+hive_tutorial
+sample_db_again
+smaple_db
+Time taken: 0.009 seconds, Fetched: 4 row(s)
+
+
+#####Creating a database schema from a text file stored in hdfs...
+hive> create external table customersText
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile;
+OK
+Time taken: 0.13 seconds
+
+#####Loading HDFS local text file data...
+hive> load data local inpath '/home/cloudera/customers.txt' overwrite into table customerstext;
+Loading data to table default.customerstext
+Table default.customerstext stats: [numFiles=1, numRows=0, totalSize=29, rawDataSize=0]
+OK
+Time taken: 0.631 seconds
+hive> select * from customerstext limit 10;
+OK
+1	Sarah	Wang
+2	John	Mark
+Time taken: 0.066 seconds, Fetched: 2 row(s)
+
+#####Creating a database schema from hdfs with data...
+hive> create table customersloc
+    > (id int, fname string, lname string)
+    > row format delimited
+    > fields terminated by '|'
+    > stored as textfile
+    > location '/user/cloudera/mydir/delimited';
+OK
+Time taken: 0.07 seconds
+hive> select * from customersloc limit 10;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+4	Mary	Jones
+5	Robert	Hudson
+6	Mary	Smith
+7	Melissa	Wilcox
+8	Megan	Smith
+9	Mary	Perez
+10	Melissa	Smith
+Time taken: 0.071 seconds, Fetched: 10 row(s)
+hive> create table customers_default
+    > (id int, fname string, lname string);
+OK
+Time taken: 0.09 seconds
+hive> describe formatted customers_default;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 12:16:15 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_default	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	transient_lastDdlTime	1595099775          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+Time taken: 0.075 seconds, Fetched: 28 row(s)
+hive> select * from customers_default limit 10;
+OK
+Time taken: 0.078 seconds
+hive> show tables;
+OK
+customer_mysql
+customers_defaulrschma
+customers_default
+customers_selflocation
+customersloc
+customerstext
+Time taken: 0.015 seconds, Fetched: 6 row(s)
+hive> select * from customer_mysql;
+OK
+1	Richard	Hernandez	XXXXXXXXX	XXXXXXXXX	6303 Heather Plaza	Brownsville	TX	78521
+2	Mary	Barrett	XXXXXXXXX	XXXXXXXXX	9526 Noble Embers Ridge	Littleton	CO	80126
+
+12434	Mary	Mills	XXXXXXXXX	XXXXXXXXX	9720 Colonial Parade	Caguas	PR	00725
+12435	Laura	Horton	XXXXXXXXX	XXXXXXXXX	5736 Honey Downs	Summerville	SC	29483
+Time taken: 0.088 seconds, Fetched: 12435 row(s)
+hive> show tables;
+OK
+customer_mysql
+customers_defaulrschma
+customers_default
+customers_selflocation
+customersloc
+customerstext
+Time taken: 0.024 seconds, Fetched: 6 row(s)
+hive> select * from customers_defaulrschema;
+FAILED: SemanticException [Error 10001]: Line 1:14 Table not found 'customers_defaulrschema'
+hive> select * from customers_defaulrschma;
+OK
+37	Virginia	Conrad	NULL	NULL
+41	Victoria	Mason	NULL	NULL
+
+42	Jim	Fernendas	NULL	NULL
+Time taken: 0.073 seconds, Fetched: 96 row(s)
+
+
+#####Inserting data to a table from another local table in Hive...
+hive> insert into customers_default select id, fname, lname from customers_defaulrschma where fname like 'V%';
+Query ID = cloudera_20200718124646_093df2c5-0966-4add-b771-aff3de8bb771
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595092172149_0004, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595092172149_0004/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595092172149_0004
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2020-07-18 12:46:32,300 Stage-1 map = 0%,  reduce = 0%
+2020-07-18 12:46:43,563 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 2.44 sec
+MapReduce Total cumulative CPU time: 2 seconds 440 msec
+Ended Job = job_1595092172149_0004
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_default/.hive-staging_hive_2020-07-18_12-46-19_091_374778076553602296-1/-ext-10000
+Loading data to table default.customers_default
+Table default.customers_default stats: [numFiles=1, numRows=95, totalSize=1953, rawDataSize=1858]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 2.44 sec   HDFS Read: 6514 HDFS Write: 2036 SUCCESS
+Total MapReduce CPU Time Spent: 2 seconds 440 msec
+OK
+Time taken: 26.005 seconds
+hive> select * from customers_default;
+OK
+37	Virginia	Conrad
+41	Victoria	Mason
+
+12256	Victoria	Alvarez
+12355	Victoria	Smith
+Time taken: 0.076 seconds, Fetched: 95 row(s)
+
+#####Inserting data to a table in Hive...
+hive> insert into customers_default values('Vishal','Kumar');
+FAILED: SemanticException [Error 10044]: Line 1:12 Cannot insert into target table because column number/types are different 'customers_default': Table insclause-0 has 3 columns, but query has 2 columns.
+hive> insert into customers_default values(12356,'Vishal','Kumar');
+Query ID = cloudera_20200718124949_03dbabab-e9ee-4a97-aae1-f0d3faa7a878
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595092172149_0005, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595092172149_0005/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595092172149_0005
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2020-07-18 12:49:27,196 Stage-1 map = 0%,  reduce = 0%
+2020-07-18 12:49:37,314 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 2.23 sec
+MapReduce Total cumulative CPU time: 2 seconds 230 msec
+Ended Job = job_1595092172149_0005
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_default/.hive-staging_hive_2020-07-18_12-49-15_875_2819008673791325344-1/-ext-10000
+Loading data to table default.customers_default
+Table default.customers_default stats: [numFiles=2, numRows=96, totalSize=1972, rawDataSize=1876]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 2.23 sec   HDFS Read: 4182 HDFS Write: 100 SUCCESS
+Total MapReduce CPU Time Spent: 2 seconds 230 msec
+OK
+Time taken: 23.971 seconds
+hive> alter table customers_default
+    > add columns (email string, phone string);
+OK
+Time taken: 0.205 seconds
+
+hive> describe customers_default;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email               	string              	                    
+phone               	string              	                    
+Time taken: 0.081 seconds, Fetched: 5 row(s)
+hive> select * from customers_default;
+OK
+37	Virginia	Conrad	NULL	NULL
+41	Victoria	Mason	NULL	NULL
+
+12355	Victoria	Smith	NULL	NULL
+12356	Vishal	Kumar	NULL	NULL
+Time taken: 0.073 seconds, Fetched: 96 row(s)
+
+#####Alter table column...
+hive> alter table customers_default
+    > change column email email_id string;
+OK
+Time taken: 0.125 seconds
+hive> select * from customers_default limit 10;
+OK
+37	Virginia	Conrad	NULL	NULL
+41	Victoria	Mason	NULL	NULL
+96	Virginia	Smith	NULL	NULL
+191	Victoria	Smith	NULL	NULL
+460	Vincent	Willis	NULL	NULL
+902	Virginia	Smith	NULL	NULL
+905	Virginia	Smith	NULL	NULL
+932	Virginia	Sandoval	NULL	NULL
+977	Virginia	Smith	NULL	NULL
+1028	Virginia	Sanders	NULL	NULL
+Time taken: 0.08 seconds, Fetched: 10 row(s)
+hive> describe customers_default;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+Time taken: 0.13 seconds, Fetched: 5 row(s)
+
+#####Alter table name...
+hive> alter table customers_default rename to customersDefault;
+OK
+Time taken: 0.148 seconds
+hive> describe customersdefault;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+Time taken: 0.117 seconds, Fetched: 5 row(s)
+
+##### Show Table properties...
+hive> show tblproperties customersdefault;
+OK
+COLUMN_STATS_ACCURATE	false
+last_modified_by	cloudera
+last_modified_time	1595103131
+numFiles	2
+numRows	-1
+rawDataSize	-1
+totalSize	1972
+transient_lastDdlTime	1595103131
+Time taken: 0.044 seconds, Fetched: 8 row(s)
+
+#####Alter table properties...
+hive> alter table customersDefault
+    > set tblproperties('location'='bihar');
+OK
+Time taken: 0.101 seconds
+hive> show tblproperties customersdefault;
+OK
+COLUMN_STATS_ACCURATE	false
+last_modified_by	cloudera
+last_modified_time	1595103385
+location	bihar
+numFiles	2
+numRows	-1
+rawDataSize	-1
+totalSize	1972
+transient_lastDdlTime	1595103385
+Time taken: 0.043 seconds, Fetched: 9 row(s)
+
+#####Alter table file format...
+hive> alter table customersDefault
+    > set fileformat parquetfile;
+OK
+Time taken: 0.2 seconds
+hive> describe formatted customersdefault;
+OK
+# col_name            	data_type           	comment             
+	 	 
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sat Jul 18 12:16:15 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/customersDefault	 
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	false               
+	last_modified_by    	cloudera            
+	last_modified_time  	1595103536          
+	location            	bihar               
+	numFiles            	2                   
+	numRows             	-1                  
+	rawDataSize         	-1                  
+	totalSize           	1972                
+	transient_lastDdlTime	1595103536          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+Time taken: 0.098 seconds, Fetched: 38 row(s)
+
+hive> describe customersdefault;
+OK
+id                  	int                 	                    
+fname               	string              	                    
+lname               	string              	                    
+email_id            	string              	                    
+phone               	string              	                    
+Time taken: 0.086 seconds, Fetched: 5 row(s)
+
+#####Alter table column...
+hive> alter table customersDefault change column fname cust_fname string;
+OK
+Time taken: 0.16 seconds
+
+#####Alter table structure - replace existing columns by other set of columns...
+hive> alter table customersDefault replace columns(cust_fname string, cust_lname string);
+OK
+Time taken: 0.126 seconds
+
+#####Alter table location...
+hive> alter table customersDefault set location '/user/customers/parquet';
+OK
+Time taken: 0.455 seconds
+
+#####Creating external table as parquetfile from HDFS located schema...
+[cloudera@quickstart ~]$ hdfs dfs -ls /user/cloudera/mydir/parquet
+Found 6 items
+drwxr-xr-x   - cloudera cloudera          0 2020-07-19 10:16 /user/cloudera/mydir/parquet/.metadata
+drwxr-xr-x   - cloudera cloudera          0 2020-07-19 10:17 /user/cloudera/mydir/parquet/.signals
+-rw-r--r--   1 cloudera cloudera      89047 2020-07-19 10:17 /user/cloudera/mydir/parquet/7c7626a7-a9fb-4bc7-b9ca-01fc86f7a66a.parquet
+-rw-r--r--   1 cloudera cloudera      88762 2020-07-19 10:17 /user/cloudera/mydir/parquet/7d860236-b444-4eff-8cf3-e2de79cb860e.parquet
+-rw-r--r--   1 cloudera cloudera      89163 2020-07-19 10:17 /user/cloudera/mydir/parquet/93828fea-719b-4ea7-bae5-d27f98ef43e0.parquet
+-rw-r--r--   1 cloudera cloudera      88944 2020-07-19 10:17 /user/cloudera/mydir/parquet/b93ef4da-98a7-4f3e-b343-6e4c42778285.parquet
+
+hive> create external table customers_parquet
+    > (customer_id int, customer_fname string, customer_lname string)
+    > stored as parquetfile
+    > location '/user/cloudera/mydir/parquet';
+OK
+Time taken: 0.865 seconds
+
+hive> select * from customers_parquet limit 5;
+OK
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/usr/lib/parquet/lib/parquet-format-2.1.0-cdh5.13.0.jar!/shaded/parquet/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/usr/lib/parquet/lib/parquet-hadoop-bundle-1.5.0-cdh5.13.0.jar!/shaded/parquet/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/usr/lib/parquet/lib/parquet-pig-bundle-1.5.0-cdh5.13.0.jar!/shaded/parquet/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/usr/lib/hive/lib/hive-exec-1.1.0-cdh5.13.0.jar!/shaded/parquet/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/usr/lib/hive/lib/hive-jdbc-1.1.0-cdh5.13.0-standalone.jar!/shaded/parquet/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [shaded.parquet.org.slf4j.helpers.NOPLoggerFactory]
+6219	Walter	Simon
+6220	Mary	Smith
+6221	Andrew	Mcgee
+6222	Stephanie	Smith
+6223	Carolyn	Stein
+Time taken: 1.084 seconds, Fetched: 5 row(s)
+hive> select * from customers_parquet limit 5;
+OK
+6219	Walter	Simon
+6220	Mary	Smith
+6221	Andrew	Mcgee
+6222	Stephanie	Smith
+6223	Carolyn	Stein
+Time taken: 0.245 seconds, Fetched: 5 row(s)
+hive> describe formatted customers_parquet;
+OK
+# col_name            	data_type           	comment             
+	 	 
+customer_id         	int                 	                    
+customer_fname      	string              	                    
+customer_lname      	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Sun Jul 19 10:27:54 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/cloudera/mydir/parquet	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	false               
+	EXTERNAL            	TRUE                
+	numFiles            	4                   
+	numRows             	-1                  
+	rawDataSize         	-1                  
+	totalSize           	355916              
+	transient_lastDdlTime	1595179674          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+Time taken: 0.115 seconds, Fetched: 34 row(s)
+
+#####Creating external table as parquetfile from HDFS located schema...
+[cloudera@quickstart ~]$ hdfs dfs -ls  /user/cloudera/mydir/avro
+Found 5 items
+-rw-r--r--   1 cloudera cloudera          0 2020-07-19 10:35 /user/cloudera/mydir/avro/_SUCCESS
+-rw-r--r--   1 cloudera cloudera     258086 2020-07-19 10:34 /user/cloudera/mydir/avro/part-m-00000.avro
+-rw-r--r--   1 cloudera cloudera     257862 2020-07-19 10:35 /user/cloudera/mydir/avro/part-m-00001.avro
+-rw-r--r--   1 cloudera cloudera     259118 2020-07-19 10:35 /user/cloudera/mydir/avro/part-m-00002.avro
+-rw-r--r--   1 cloudera cloudera     260893 2020-07-19 10:35 /user/cloudera/mydir/avro/part-m-00003.avro
+[cloudera@quickstart ~]$ avro-tools -tail tojson   /user/cloudera/mydir/avro/part-m-00000.avro
+
+hive> create external table customers_avro
+    > (customer_id int, customer_fname string, customer_lname string)
+    > stored as avro
+    > location '/user/cloudera/mydir/avro';
+OK
+Time taken: 0.309 seconds
+hive> select * from customers_avro limit 5;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+4	Mary	Jones
+5	Robert	Hudson
+Time taken: 0.116 seconds, Fetched: 5 row(s)
+
+#####Creating external table from HDFS local text file using RegEx...
+[cloudera@quickstart ~]$ cat customer_fixed
+1john31
+2Jimy32
+3scar28
+
+hive> create external table customers_fixed
+    > (customer_id int, customer_fname string, customer_lname string)
+    > row format serde 'org.apache.hadoop.hive.serde2.RegexSerDe'
+    > with serdeproperties("input.regex"="(.{1})(.{4})(.{2})")
+    > location 'file:////home/cloudera/customer';
+OK
+Time taken: 0.098 seconds
+hive> select * from customers_fixed;
+OK
+1	john	31
+2	Jimy	32
+3	scar	28
+Time taken: 0.113 seconds, Fetched: 3 row(s)
+
+
+#####Creating external avro table from schema file...
+[cloudera@quickstart ~]$ avro-tools getschema hdfs://localhost/user/cloudera/mydir/avro/part-m-00000.avro > customers.avsc
+[cloudera@quickstart ~]$ cat customers.avsc
+{
+  "type" : "record",
+  "name" : "customers",
+  "doc" : "Sqoop import of customers",
+  "fields" : [ {
+    "name" : "customer_id",
+    "type" : [ "null", "int" ],
+    "default" : null,
+    "columnName" : "customer_id",
+    "sqlType" : "4"
+  }, {
+    "name" : "customer_fname",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_fname",
+    "sqlType" : "12"
+  }, {
+    "name" : "customer_lname",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_lname",
+    "sqlType" : "12"
+  }, {
+    "name" : "customer_email",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_email",
+    "sqlType" : "12"
+  }, {
+    "name" : "customer_password",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_password",
+    "sqlType" : "12"
+  }, {
+    "name" : "customer_street",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_street",
+    "sqlType" : "12"
+  }, {
+    "name" : "customer_city",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_city",
+    "sqlType" : "12"
+  }, {
+    "name" : "customer_state",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_state",
+    "sqlType" : "12"
+  }, {
+    "name" : "customer_zipcode",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "customer_zipcode",
+    "sqlType" : "12"
+  } ],
+  "tableName" : "customers"
+}
+
+hive> create external table customers_avro1
+    > stored as avro
+    > location '/user/cloudera/mydir/avro'
+    > tblproperties ('avro.schema.url'='file:////home/cloudera/customers.avsc');
+OK
+Time taken: 0.076 seconds
+hive> select * from customers_avro1 limit 5;
+OK
+1	Richard	Hernandez	XXXXXXXXX	XXXXXXXXX	6303 Heather Plaza	Brownsville	TX	78521
+2	Mary	Barrett	XXXXXXXXX	XXXXXXXXX	9526 Noble Embers Ridge	Littleton	CO	80126
+3	Ann	Smith	XXXXXXXXX	XXXXXXXXX	3422 Blue Pioneer Bend	Caguas	PR	00725
+4	Mary	Jones	XXXXXXXXX	XXXXXXXXX	8324 Little Common	San Marcos	CA	92069
+5	Robert	Hudson	XXXXXXXXX	XXXXXXXXX	10 Crystal River Mall 	Caguas	PR	00725
+Time taken: 0.104 seconds, Fetched: 5 row(s)
+hive> select * from customers_fixed;
+OK
+1	john	31
+2	Jimy	32
+3	scar	28
+Time taken: 0.085 seconds, Fetched: 3 row(s)
+
+
+hive> create external table customers_array
+    > (customer_id int, customer_name string, email ARRAY<string>, age int)
+    > row format delimited
+    > fields terminated by ','
+    > collection items terminated by ':';
+OK
+Time taken: 0.184 seconds
+hive> select * from customers_array;
+OK
+Time taken: 0.071 seconds
+
+
+#####Creating external table having array columns and stored in HDFS as text file...
+hive> create external table customers_array
+    > (customer_id int, customer_name string, email ARRAY<string>, age int)
+    > row format delimited
+    > fields terminated by ','
+    > collection items terminated by ':'
+    > location '/home/cloudera/customer/customer_array.txt';
+OK
+Time taken: 0.124 seconds
+hive> select * from customers_array;
+OK
+Time taken: 0.101 seconds
+hive> drop table customers_array;
+OK
+Time taken: 0.095 seconds
+hive> create external table customers_array
+    > (customer_id int, customer_name string, email ARRAY<string>, age int)
+    > row format delimited
+    > fields terminated by ','
+    > collection items terminated by ':'
+    > location '/user/customers/array';
+OK
+Time taken: 0.111 seconds
+hive> select * from customers_array;
+OK
+Time taken: 0.106 seconds
+hive> select * from customers_array;
+OK
+1	john	["john@gmail.com","j@gmail.com","john21@yahoo.com"]	31
+2	jim	["jim@rediff.com","jim32@gmail.com"]	32
+3	scarlet	["sc@gmail.com","scarlet@gmail.com"]	28
+Time taken: 0.081 seconds, Fetched: 3 row(s)
+hive> select email[1] from customers_array;
+OK
+j@gmail.com
+jim32@gmail.com
+scarlet@gmail.com
+Time taken: 0.116 seconds, Fetched: 3 row(s)
+hive> 
+
+
+##### Map keys....
+[cloudera@quickstart ~]$ hdfs dfs -ls /user/customers/map
+Found 1 items
+-rw-r--r--   1 cloudera supergroup        124 2020-07-20 10:39 /user/customers/map/customer_map.txt
+[cloudera@quickstart ~]$ hdfs dfs -cat /user/customers/map/customer_map.txt
+john,wife>rose|son>jack|daughter>Sandra,newyork
+Andrew,wife>mary|son>john,london
+Mathew, wife>kim|daughter>sherry,melbourne
+[cloudera@quickstart ~]$ 
+
+hive> create external table customer_map
+    > (name string, relation map<string,string>,city string)
+    > row format delimited
+    > fields terminated by ','
+    > collection items terminated by '|'
+    > map keys terminated by '>'
+    > location '/user/customers/map';
+OK
+Time taken: 0.092 seconds
+hive> select * from customer_map;
+OK
+john	{"wife":"rose","son":"jack","daughter":"Sandra"}	newyork
+Andrew	{"wife":"mary","son":"john"}	london
+Mathew	{" wife":"kim","daughter":"sherry"}	melbourne
+Time taken: 0.074 seconds, Fetched: 3 row(s)
+hive> select map_keys(relation) from customer_map;
+OK
+["wife","son","daughter"]
+["wife","son"]
+[" wife","daughter"]
+Time taken: 0.142 seconds, Fetched: 3 row(s)
+hive> select map_values(relation) from customer_map;
+OK
+["rose","jack","Sandra"]
+["mary","john"]
+["kim","sherry"]
+Time taken: 0.066 seconds, Fetched: 3 row(s)
+
+#####struct ....
+[cloudera@quickstart ~]$ hdfs dfs -ls /user/customers/struct
+Found 1 items
+-rw-r--r--   1 cloudera supergroup         75 2020-07-20 10:57
+/user/customers/struct/customer_struct.txt
+
+[cloudera@quickstart ~]$ hdfs dfs -cat
+/user/customers/struct/customer_struct.txt
+john,newyork$US$12345
+jim,Melbourne$australia$45678
+Andrew,London$UK$87383
+
+hive> create external table customer_struct
+    > (name string, address struct<city:string,country:string,zipcode:string>)
+    > row format delimited
+    > fields terminated by ','
+    > collection items terminated by '$'
+    > location '/user/customers/struct';
+OK
+Time taken: 0.326 seconds
+hive> select * from customer_struct;
+OK
+john	{"city":"newyork","country":"US","zipcode":"12345"}
+jim	{"city":"Melbourne","country":"australia","zipcode":"45678"}
+Andrew	{"city":"London","country":"UK","zipcode":"87383"}
+Time taken: 0.48 seconds, Fetched: 3 row(s)
+hive> select address.country from customer_struct;
+OK
+US
+australia
+UK
+Time taken: 0.107 seconds, Fetched: 3 row(s)
+hive> select address.country,address.city from customer_struct;
+OK
+US	newyork
+australia	Melbourne
+UK	London
+Time taken: 0.073 seconds, Fetched: 3 row(s)
+
+hive> select size(email) from customers_array;
+OK
+3
+2
+2
+Time taken: 0.107 seconds, Fetched: 3 row(s)
+hive> select size(relation) from customer_map;
+OK
+3
+2
+2
+Time taken: 0.083 seconds, Fetched: 3 row(s)
+
+
+#####Mathematical functions...
+hive> select factorial(5);
+FAILED: SemanticException [Error 10011]: Line 1:7 Invalid function 'factorial'
+
+hive> select concat('Vishal','|','kumar');
+OK
+Vishal|kumar
+Time taken: 0.147 seconds, Fetched: 1 row(s)
+
+hive> select * from customers_parquet limit 10;
+OK
+6219	Walter	Simon
+6220	Mary	Smith
+6221	Andrew	Mcgee
+6222	Stephanie	Smith
+6223	Carolyn	Stein
+6224	Scott	Howe
+6225	Mary	Smith
+6226	John	Jones
+6227	David	Weber
+6228	Roger	Davila
+Time taken: 0.096 seconds, Fetched: 10 row(s)
+hive> describe customers_parquet;
+OK
+customer_id         	int                 	                    
+customer_fname      	string              	                    
+customer_lname      	string              	                    
+Time taken: 0.109 seconds, Fetched: 3 row(s)
+
+hive> select concat(customer_fname,'->',customer_lname) from customers_parquet limit 2;
+OK
+Walter->Simon
+Mary->Smith
+Time taken: 0.062 seconds, Fetched: 2 row(s)
+
+hive> select concat('My name is ', customer_fname,' ',customer_lname) from customers_parquet limit 2;
+OK
+My name is Walter Simon
+My name is Mary Smith
+Time taken: 0.073 seconds, Fetched: 2 row(s)
+
+hive> select concat_ws('>',customer_fname,customer_lname) from customers_parquet limit 2;
+OK
+Walter>Simon
+Mary>Smith
+Time taken: 0.072 seconds, Fetched: 2 row(s)
+
+hive> select length(customer_fname) from customers_parquet limit 2;
+OK
+6
+4
+Time taken: 0.101 seconds, Fetched: 2 row(s)
+
+hive> select upper(customer_fname) from customers_parquet limit 2;
+OK
+WALTER
+MARY
+Time taken: 0.112 seconds, Fetched: 2 row(s)
+hive> select reverse(customer_fname) from customers_parquet limit 2;
+OK
+retlaW
+yraM
+Time taken: 0.1 seconds, Fetched: 2 row(s)
+
+hive> select lpad(customer_fname,15,'#') from customers_parquet limit 10;
+OK
+#########Walter
+###########Mary
+#########Andrew
+######Stephanie
+########Carolyn
+##########Scott
+###########Mary
+###########John
+##########David
+##########Roger
+Time taken: 0.106 seconds, Fetched: 10 row(s)
+hive> select split(customer_fname,'o') from customers_parquet limit 10;
+OK
+["Walter"]
+["Mary"]
+["Andrew"]
+["Stephanie"]
+["Car","lyn"]
+["Sc","tt"]
+["Mary"]
+["J","hn"]
+["David"]
+["R","ger"]
+Time taken: 0.086 seconds, Fetched: 10 row(s)
+hive> select substr(customer_fname,1,5) from customers_parquet limit 10;
+OK
+Walte
+Mary
+Andre
+Steph
+Carol
+Scott
+Mary
+John
+David
+Roger
+Time taken: 0.083 seconds, Fetched: 10 row(s)
+
+hive> select regexp_replace (customer_fname, 'Mary','Sherry') from customers_parquet limit 10;
+OK
+Walter
+Sherry
+Andrew
+Stephanie
+Carolyn
+Scott
+Sherry
+John
+David
+Roger
+Time taken: 0.068 seconds, Fetched: 10 row(s)
+hive> select year('2020-07-20');
+OK
+2020
+Time taken: 0.087 seconds, Fetched: 1 row(s)
+
+hive> select month('2020-07-20');
+OK
+7
+Time taken: 0.082 seconds, Fetched: 1 row(s)
+hive> select day('2020-07-20');
+OK
+20
+Time taken: 0.081 seconds, Fetched: 1 row(s)
+hive> select hour('2020-07-20 00:56:45');
+OK
+0
+Time taken: 0.082 seconds, Fetched: 1 row(s)
+hive> select minute('2020-07-20 00:56:45');
+OK
+56
+Time taken: 0.075 seconds, Fetched: 1 row(s)
+hive> select second('2020-07-20 00:56:45');
+OK
+45
+Time taken: 0.075 seconds, Fetched: 1 row(s)
+hive> select date_diff('2020-12-31','2020-07-21');
+FAILED: SemanticException [Error 10011]: Line 1:7 Invalid function 'date_diff'
+hive> select datediff('2020-12-31','2020-07-21');
+OK
+163
+Time taken: 0.071 seconds, Fetched: 1 row(s)
+hive> select date_add('2020-07-21',10);
+OK
+2020-07-31
+Time taken: 0.12 seconds, Fetched: 1 row(s)
+hive> select add_months('2020-07-21',2);
+OK
+2020-09-21
+Time taken: 0.095 seconds, Fetched: 1 row(s)
+hive> select current_date;
+OK
+2020-07-20
+Time taken: 0.122 seconds, Fetched: 1 row(s)
+hive> select current_timestamp;
+OK
+2020-07-20 12:30:30.764
+Time taken: 0.091 seconds, Fetched: 1 row(s)
+
+hive> select unix_timestamp();
+unix_timestamp(void) is deprecated. Use current_timestamp instead.
+OK
+1595273447
+Time taken: 0.1 seconds, Fetched: 1 row(s)
+hive> select unix_timestamp('2020-07-25 12:45:90');
+OK
+1595706390
+Time taken: 0.101 seconds, Fetched: 1 row(s)
+hive> select unix_timestamp('2020/07/25 12:45:90','YYYY/MM/dd hh:mm:ss');
+OK
+1577609190
+Time taken: 0.078 seconds, Fetched: 1 row(s)
+hive> select date_format('2020/07/25','MM-dd-yy');
+OK
+NULL
+Time taken: 0.093 seconds, Fetched: 1 row(s)
+hive> select date_format('2020/07/25','MM-dd-YY');
+OK
+NULL
+Time taken: 0.081 seconds, Fetched: 1 row(s)
+hive> select date_format('2020/07/25','MM-dd-YYYY');
+OK
+NULL
+Time taken: 0.083 seconds, Fetched: 1 row(s)
+hive> select date_format('2020/07/25','YYYY-MM-dd');
+OK
+NULL
+Time taken: 0.065 seconds, Fetched: 1 row(s)
+hive> select date_format('2020-07-21','YYYY-MM-dd');
+OK
+2020-07-21
+Time taken: 0.066 seconds, Fetched: 1 row(s)
+hive> 
+
+
+#####Partitioning....
+hive> create external table orders
+    > (order_id int, order_date string, order_customer_id int, order_status string)
+    > row format delimited
+    > fields terminated by ','
+    > location '/user/cloudera/orders';
+OK
+Time taken: 1.529 seconds
+hive> select * from orders limit 10;
+OK
+1	2013-07-25 00:00:00.0	11599	CLOSED
+2	2013-07-25 00:00:00.0	256	PENDING_PAYMENT
+.........................
+
+Time taken: 0.111 seconds, Fetched: 10 row(s)
+
+hive> set hive.exec.dynamic.partition = true;
+hive> set hive.exec.dynamic.partition.mode = nonstrict;
+hive> insert overwrite table orders_partitioned
+    > partition (order_status)
+    > select order_id, order_date, order_customer_id, order_status from orders;
+Query ID = cloudera_20200723104949_3299e60d-66b1-45f2-8fdd-d1fc7b713ce2
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595518542358_0001, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595518542358_0001/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595518542358_0001
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2020-07-23 10:49:45,879 Stage-1 map = 0%,  reduce = 0%
+2020-07-23 10:49:57,041 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 3.2 sec
+MapReduce Total cumulative CPU time: 3 seconds 200 msec
+Ended Job = job_1595518542358_0001
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/orders_partitioned/.hive-staging_hive_2020-07-23_10-49-29_971_7432838535483488446-1/-ext-10000
+Loading data to table default.orders_partitioned partition (order_status=null)
+	 Time taken for load dynamic partitions : 1199
+	Loading partition {order_status=CANCELED}
+	Loading partition {order_status=ON_HOLD}
+	Loading partition {order_status=PROCESSING}
+	Loading partition {order_status=CLOSED}
+	Loading partition {order_status=PENDING}
+	Loading partition {order_status=COMPLETE}
+	Loading partition {order_status=PAYMENT_REVIEW}
+	Loading partition {order_status=PENDING_PAYMENT}
+	Loading partition {order_status=SUSPECTED_FRAUD}
+	 Time taken for adding to write entity : 9
+Partition default.orders_partitioned{order_status=CANCELED} stats: [numFiles=1, numRows=1428, totalSize=47016, rawDataSize=45588]
+Partition default.orders_partitioned{order_status=CLOSED} stats: [numFiles=1, numRows=7556, totalSize=248938, rawDataSize=241382]
+Partition default.orders_partitioned{order_status=COMPLETE} stats: [numFiles=1, numRows=22899, totalSize=754493, rawDataSize=731594]
+Partition default.orders_partitioned{order_status=ON_HOLD} stats: [numFiles=1, numRows=3798, totalSize=125149, rawDataSize=121351]
+Partition default.orders_partitioned{order_status=PAYMENT_REVIEW} stats: [numFiles=1, numRows=729, totalSize=24004, rawDataSize=23275]
+Partition default.orders_partitioned{order_status=PENDING} stats: [numFiles=1, numRows=7610, totalSize=250741, rawDataSize=243131]
+Partition default.orders_partitioned{order_status=PENDING_PAYMENT} stats: [numFiles=1, numRows=15030, totalSize=495146, rawDataSize=480116]
+Partition default.orders_partitioned{order_status=PROCESSING} stats: [numFiles=1, numRows=8275, totalSize=272640, rawDataSize=264365]
+Partition default.orders_partitioned{order_status=SUSPECTED_FRAUD} stats: [numFiles=1, numRows=1558, totalSize=51350, rawDataSize=49792]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 3.2 sec   HDFS Read: 3004736 HDFS Write: 2270187 SUCCESS
+Total MapReduce CPU Time Spent: 3 seconds 200 msec
+OK
+Time taken: 30.569 seconds
+
+hive> select * from orders_partitioned limit 10;
+OK
+50	2013-07-25 00:00:00.0	5225	CANCELED
+112	2013-07-26 00:00:00.0	5375	CANCELED
+527	2013-07-28 00:00:00.0	5426	CANCELED
+552	2013-07-28 00:00:00.0	1445	CANCELED
+564	2013-07-28 00:00:00.0	2216	CANCELED
+607	2013-07-28 00:00:00.0	6376	CANCELED
+649	2013-07-28 00:00:00.0	7261	CANCELED
+667	2013-07-28 00:00:00.0	4726	CANCELED
+716	2013-07-29 00:00:00.0	2581	CANCELED
+717	2013-07-29 00:00:00.0	8208	CANCELED
+Time taken: 0.081 seconds, Fetched: 10 row(s)
+
+hive> describe formatted orders_partitioned;
+OK
+# col_name            	data_type           	comment             
+	 	 
+order_id            	int                 	                    
+order_date          	string              	                    
+order_customer_id   	int                 	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+	 	 
+order_status        	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Tue Jul 21 13:46:42 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/orders_partitioned	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	EXTERNAL            	TRUE                
+	numPartitions       	9                   
+	transient_lastDdlTime	1595364402          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	,                   
+	serialization.format	,                   
+Time taken: 0.179 seconds, Fetched: 36 row(s)
+
+hive> select * from orders_partitioned where order_status = 'COMPLETE';
+OK
+3	2013-07-25 00:00:00.0	12111	COMPLETE
+5	2013-07-25 00:00:00.0	11318	COMPLETE
+68883	2014-07-23 00:00:00.0	5533	COMPLETE
+Time taken: 0.706 seconds, Fetched: 22899 row(s)
+
+hive> explain select * from orders_partitioned where order_status = 'COMPLETE';
+OK
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        TableScan
+          alias: orders_partitioned
+          Statistics: Num rows: 22899 Data size: 731594 Basic stats: COMPLETE Column stats: NONE
+          Select Operator
+            expressions: order_id (type: int), order_date (type: string), order_customer_id (type: int), 'COMPLETE' (type: string)
+            outputColumnNames: _col0, _col1, _col2, _col3
+            Statistics: Num rows: 22899 Data size: 731594 Basic stats: COMPLETE Column stats: NONE
+            ListSink
+
+Time taken: 0.098 seconds, Fetched: 17 row(s)
+
+hive> show partitions orders_partitioned;
+OK
+order_status=CANCELED
+order_status=CLOSED
+order_status=COMPLETE
+order_status=ON_HOLD
+order_status=PAYMENT_REVIEW
+order_status=PENDING
+order_status=PENDING_PAYMENT
+order_status=PROCESSING
+order_status=SUSPECTED_FRAUD
+Time taken: 0.087 seconds, Fetched: 9 row(s)
+
+
+#####Bucketing...
+hive> set hive.enforce.bucketing = true;
+hive> create external table orders_bucketed
+    > (order_id int, order_date string, order_customer_id int, order_status string)
+    > clustered by (order_customer_id) into 10 buckets
+    > row format delimited
+    > fields terminated by ',';
+OK
+Time taken: 0.164 seconds
+
+hive> select * from orders_bucketed;
+OK
+Time taken: 0.071 seconds
+hive> describe formatted orders_bucketed;
+OK
+# col_name            	data_type           	comment             
+	 	 
+order_id            	int                 	                    
+order_date          	string              	                    
+order_customer_id   	int                 	                    
+order_status        	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Thu Jul 23 11:36:28 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/orders_bucketed	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	EXTERNAL            	TRUE                
+	transient_lastDdlTime	1595529388          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	10                  	 
+Bucket Columns:     	[order_customer_id] 	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	,                   
+	serialization.format	,                   
+Time taken: 0.093 seconds, Fetched: 31 row(s)
+
+hive> describe orders_bucketed;
+OK
+order_id            	int                 	                    
+order_date          	string              	                    
+order_customer_id   	int                 	                    
+order_status        	string              	                    
+Time taken: 0.137 seconds, Fetched: 4 row(s)
+
+hive> insert overwrite table orders_bucketed
+    > select order_id, order_date, order_customer_id, order_status from orders;
+Query ID = cloudera_20200723114848_2c79e02a-4847-48de-a0a9-7063d658284a
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks determined at compile time: 10
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1595518542358_0002, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595518542358_0002/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595518542358_0002
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 10
+2020-07-23 11:48:58,940 Stage-1 map = 0%,  reduce = 0%
+2020-07-23 11:49:09,973 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 2.73 sec
+2020-07-23 11:49:51,929 Stage-1 map = 100%,  reduce = 7%, Cumulative CPU 3.95 sec
+2020-07-23 11:49:59,777 Stage-1 map = 100%,  reduce = 10%, Cumulative CPU 5.58 sec
+2020-07-23 11:50:01,052 Stage-1 map = 100%,  reduce = 17%, Cumulative CPU 7.19 sec
+2020-07-23 11:50:03,725 Stage-1 map = 100%,  reduce = 23%, Cumulative CPU 8.87 sec
+2020-07-23 11:50:05,180 Stage-1 map = 100%,  reduce = 30%, Cumulative CPU 10.49 sec
+2020-07-23 11:50:06,634 Stage-1 map = 100%,  reduce = 40%, Cumulative CPU 13.32 sec
+2020-07-23 11:50:07,998 Stage-1 map = 100%,  reduce = 47%, Cumulative CPU 14.75 sec
+2020-07-23 11:50:11,034 Stage-1 map = 100%,  reduce = 50%, Cumulative CPU 16.06 sec
+2020-07-23 11:50:12,499 Stage-1 map = 100%,  reduce = 53%, Cumulative CPU 18.38 sec
+2020-07-23 11:50:13,850 Stage-1 map = 100%,  reduce = 57%, Cumulative CPU 18.69 sec
+2020-07-23 11:50:16,435 Stage-1 map = 100%,  reduce = 60%, Cumulative CPU 20.17 sec
+2020-07-23 11:50:44,934 Stage-1 map = 100%,  reduce = 67%, Cumulative CPU 22.16 sec
+2020-07-23 11:50:46,141 Stage-1 map = 100%,  reduce = 70%, Cumulative CPU 22.64 sec
+2020-07-23 11:50:49,988 Stage-1 map = 100%,  reduce = 77%, Cumulative CPU 24.77 sec
+2020-07-23 11:50:51,166 Stage-1 map = 100%,  reduce = 80%, Cumulative CPU 25.12 sec
+2020-07-23 11:50:52,421 Stage-1 map = 100%,  reduce = 90%, Cumulative CPU 27.66 sec
+2020-07-23 11:50:53,465 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 30.36 sec
+MapReduce Total cumulative CPU time: 30 seconds 360 msec
+Ended Job = job_1595518542358_0002
+Loading data to table default.orders_bucketed
+Table default.orders_bucketed stats: [numFiles=10, numRows=68883, totalSize=2999944, rawDataSize=2931061]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 10   Cumulative CPU: 30.36 sec   HDFS Read: 3043311 HDFS Write: 3000794 SUCCESS
+Total MapReduce CPU Time Spent: 30 seconds 360 msec
+OK
+Time taken: 128.441 seconds
+
+hive> show tables;
+OK
+customer_map
+customer_mysql
+customer_struct
+customers_array
+customers_avro
+customers_avro1
+customers_defaulrschma
+customers_fixed
+customers_parquet
+customers_selflocation
+customersdefault
+customersloc
+customerstext
+orders
+orders_bucketed
+orders_partitioned
+Time taken: 0.008 seconds, Fetched: 16 row(s)
+
+
+#####Joins...
+hive> create external table customers
+    > (customer_id int, customer_fname string, customer_lname string)
+    > row format delimited
+    > fields terminated by ','
+    > location '/user/cloudera/customers';
+OK
+Time taken: 0.075 seconds
+hive> select * from customers limit 5;
+OK
+1	Richard	Hernandez
+2	Mary	Barrett
+3	Ann	Smith
+4	Mary	Jones
+5	Robert	Hudson
+Time taken: 0.069 seconds, Fetched: 5 row(s)
+
+hive> select c.customer_id, c.customer_fname, c.customer_lname, o.order_date, o.order_status
+    > from customers c join orders o
+    > on (c.customer_id = o.order_customer_id);
+Query ID = cloudera_20200723121212_acf6ea03-f1ec-44aa-a6bf-55281e9aee95
+Total jobs = 1
+Execution log at: /tmp/cloudera/cloudera_20200723121212_acf6ea03-f1ec-44aa-a6bf-55281e9aee95.log
+2020-07-23 12:12:14	Starting to launch local task to process map join;	maximum memory = 1013645312
+2020-07-23 12:12:17	Dump the side-table for tag: 0 with group count: 12435 into file: file:/tmp/cloudera/c034c37c-407e-4bca-8fc3-8578cc3b5cbf/hive_2020-07-23_12-12-08_925_1601641097680259395-1/-local-10003/HashTable-Stage-3/MapJoin-mapfile00--.hashtable
+2020-07-23 12:12:17	Uploaded 1 File to: file:/tmp/cloudera/c034c37c-407e-4bca-8fc3-8578cc3b5cbf/hive_2020-07-23_12-12-08_925_1601641097680259395-1/-local-10003/HashTable-Stage-3/MapJoin-mapfile00--.hashtable (423718 bytes)
+2020-07-23 12:12:17	End of local task; Time Taken: 3.007 sec.
+Execution completed successfully
+MapredLocal task succeeded
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595518542358_0003, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595518542358_0003/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595518542358_0003
+Hadoop job information for Stage-3: number of mappers: 1; number of reducers: 0
+2020-07-23 12:12:28,479 Stage-3 map = 0%,  reduce = 0%
+2020-07-23 12:12:40,367 Stage-3 map = 100%,  reduce = 0%, Cumulative CPU 4.04 sec
+MapReduce Total cumulative CPU time: 4 seconds 40 msec
+Ended Job = job_1595518542358_0003
+MapReduce Jobs Launched: 
+Stage-Stage-3: Map: 1   Cumulative CPU: 4.04 sec   HDFS Read: 3007372 HDFS Write: 3489035 SUCCESS
+Total MapReduce CPU Time Spent: 4 seconds 40 msec
+OK
+11599	Mary	Malone	2013-07-25 00:00:00.0	CLOSED
+256	David	Rodriguez	2013-07-25 00:00:00.0	PENDING_PAYMENT
+Time taken: 32.616 seconds, Fetched: 68883 row(s)
+
+hive> select c.customer_id, c.customer_fname, c.customer_lname, o.order_date, o.order_status
+    > from customers c left outer join orders o
+    > on (c.customer_id = o.order_customer_id);
+Query ID = cloudera_20200723121616_31b1e0df-f941-40c7-b709-ca48cfd550e5
+Total jobs = 1
+Execution log at: /tmp/cloudera/cloudera_20200723121616_31b1e0df-f941-40c7-b709-ca48cfd550e5.log
+2020-07-23 12:16:59	Starting to launch local task to process map join;	maximum memory = 1013645312
+2020-07-23 12:17:02	Dump the side-table for tag: 1 with group count: 12405 into file: file:/tmp/cloudera/f042466a-c3e2-4925-9242-51f0830e6a82/hive_2020-07-23_12-16-52_630_2842510498416774252-1/-local-10003/HashTable-Stage-3/MapJoin-mapfile01--.hashtable
+2020-07-23 12:17:02	Uploaded 1 File to: file:/tmp/cloudera/f042466a-c3e2-4925-9242-51f0830e6a82/hive_2020-07-23_12-16-52_630_2842510498416774252-1/-local-10003/HashTable-Stage-3/MapJoin-mapfile01--.hashtable (2802282 bytes)
+2020-07-23 12:17:02	End of local task; Time Taken: 3.023 sec.
+Execution completed successfully
+MapredLocal task succeeded
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595518542358_0004, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595518542358_0004/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595518542358_0004
+Hadoop job information for Stage-3: number of mappers: 1; number of reducers: 0
+2020-07-23 12:17:15,490 Stage-3 map = 0%,  reduce = 0%
+2020-07-23 12:17:26,779 Stage-3 map = 100%,  reduce = 0%, Cumulative CPU 3.45 sec
+MapReduce Total cumulative CPU time: 3 seconds 450 msec
+Ended Job = job_1595518542358_0004
+MapReduce Jobs Launched: 
+Stage-Stage-3: Map: 1   Cumulative CPU: 3.45 sec   HDFS Read: 960736 HDFS Write: 3489742 SUCCESS
+Total MapReduce CPU Time Spent: 3 seconds 450 msec
+OK
+1	Richard	Hernandez	2013-12-13 00:00:00.0	COMPLETE
+2	Mary	Barrett	2013-10-29 00:00:00.0	PENDING_PAYMENT
+
+Time taken: 43.882 seconds, Fetched: 68913 row(s)
+
+hive> explain select c.customer_id, c.customer_fname, c.customer_lname, o.order_date, o.order_status
+    > from customers c full outer join orders o
+    > on (c.customer_id = o.order_customer_id);
+OK
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Map Operator Tree:
+          TableScan
+            alias: c
+            Statistics: Num rows: 4674 Data size: 953525 Basic stats: COMPLETE Column stats: NONE
+            Reduce Output Operator
+              key expressions: customer_id (type: int)
+              sort order: +
+              Map-reduce partition columns: customer_id (type: int)
+              Statistics: Num rows: 4674 Data size: 953525 Basic stats: COMPLETE Column stats: NONE
+              value expressions: customer_fname (type: string), customer_lname (type: string)
+          TableScan
+            alias: o
+            Statistics: Num rows: 14705 Data size: 2999944 Basic stats: COMPLETE Column stats: NONE
+            Reduce Output Operator
+              key expressions: order_customer_id (type: int)
+              sort order: +
+              Map-reduce partition columns: order_customer_id (type: int)
+              Statistics: Num rows: 14705 Data size: 2999944 Basic stats: COMPLETE Column stats: NONE
+              value expressions: order_date (type: string), order_status (type: string)
+      Reduce Operator Tree:
+        Join Operator
+          condition map:
+               Outer Join 0 to 1
+          keys:
+            0 customer_id (type: int)
+            1 order_customer_id (type: int)
+          outputColumnNames: _col0, _col1, _col2, _col7, _col9
+          Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+          Select Operator
+            expressions: _col0 (type: int), _col1 (type: string), _col2 (type: string), _col7 (type: string), _col9 (type: string)
+            outputColumnNames: _col0, _col1, _col2, _col3, _col4
+            Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+            File Output Operator
+              compressed: false
+              Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                  serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        ListSink
+
+Time taken: 0.113 seconds, Fetched: 53 row(s)
+hive> explain select c.customer_id, c.customer_fname, c.customer_lname, o.order_date, o.order_status
+    > from customers c join orders o
+    > on (c.customer_id = o.order_customer_id);
+OK
+STAGE DEPENDENCIES:
+  Stage-4 is a root stage
+  Stage-3 depends on stages: Stage-4
+  Stage-0 depends on stages: Stage-3
+
+STAGE PLANS:
+  Stage: Stage-4
+    Map Reduce Local Work
+      Alias -> Map Local Tables:
+        c 
+          Fetch Operator
+            limit: -1
+      Alias -> Map Local Operator Tree:
+        c 
+          TableScan
+            alias: c
+            Statistics: Num rows: 4674 Data size: 953525 Basic stats: COMPLETE Column stats: NONE
+            Filter Operator
+              predicate: customer_id is not null (type: boolean)
+              Statistics: Num rows: 2337 Data size: 476762 Basic stats: COMPLETE Column stats: NONE
+              HashTable Sink Operator
+                keys:
+                  0 customer_id (type: int)
+                  1 order_customer_id (type: int)
+
+  Stage: Stage-3
+    Map Reduce
+      Map Operator Tree:
+          TableScan
+            alias: o
+            Statistics: Num rows: 14705 Data size: 2999944 Basic stats: COMPLETE Column stats: NONE
+            Filter Operator
+              predicate: order_customer_id is not null (type: boolean)
+              Statistics: Num rows: 7353 Data size: 1500074 Basic stats: COMPLETE Column stats: NONE
+              Map Join Operator
+                condition map:
+                     Inner Join 0 to 1
+                keys:
+                  0 customer_id (type: int)
+                  1 order_customer_id (type: int)
+                outputColumnNames: _col0, _col1, _col2, _col7, _col9
+                Statistics: Num rows: 8088 Data size: 1650081 Basic stats: COMPLETE Column stats: NONE
+                Select Operator
+                  expressions: _col0 (type: int), _col1 (type: string), _col2 (type: string), _col7 (type: string), _col9 (type: string)
+                  outputColumnNames: _col0, _col1, _col2, _col3, _col4
+                  Statistics: Num rows: 8088 Data size: 1650081 Basic stats: COMPLETE Column stats: NONE
+                  File Output Operator
+                    compressed: false
+                    Statistics: Num rows: 8088 Data size: 1650081 Basic stats: COMPLETE Column stats: NONE
+                    table:
+                        input format: org.apache.hadoop.mapred.TextInputFormat
+                        output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                        serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+      Local Work:
+        Map Reduce Local Work
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        ListSink
+
+Time taken: 0.135 seconds, Fetched: 62 row(s)
+
+hive> explain select c.customer_id, c.customer_fname, c.customer_lname, o.order_date, o.order_status
+    > from customers c left outer join orders o
+    > on (c.customer_id = o.order_customer_id);
+OK
+STAGE DEPENDENCIES:
+  Stage-4 is a root stage
+  Stage-3 depends on stages: Stage-4
+  Stage-0 depends on stages: Stage-3
+
+STAGE PLANS:
+  Stage: Stage-4
+    Map Reduce Local Work
+      Alias -> Map Local Tables:
+        o 
+          Fetch Operator
+            limit: -1
+      Alias -> Map Local Operator Tree:
+        o 
+          TableScan
+            alias: o
+            Statistics: Num rows: 14705 Data size: 2999944 Basic stats: COMPLETE Column stats: NONE
+            HashTable Sink Operator
+              keys:
+                0 customer_id (type: int)
+                1 order_customer_id (type: int)
+
+  Stage: Stage-3
+    Map Reduce
+      Map Operator Tree:
+          TableScan
+            alias: c
+            Statistics: Num rows: 4674 Data size: 953525 Basic stats: COMPLETE Column stats: NONE
+            Map Join Operator
+              condition map:
+                   Left Outer Join0 to 1
+              keys:
+                0 customer_id (type: int)
+                1 order_customer_id (type: int)
+              outputColumnNames: _col0, _col1, _col2, _col7, _col9
+              Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+              Select Operator
+                expressions: _col0 (type: int), _col1 (type: string), _col2 (type: string), _col7 (type: string), _col9 (type: string)
+                outputColumnNames: _col0, _col1, _col2, _col3, _col4
+                Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+                File Output Operator
+                  compressed: false
+                  Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+      Local Work:
+        Map Reduce Local Work
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        ListSink
+
+Time taken: 0.086 seconds, Fetched: 56 row(s)
+
+hive> explain select c.customer_id, c.customer_fname, c.customer_lname, o.order_date, o.order_status
+    > from customers c right outer join orders o
+    > on (c.customer_id = o.order_customer_id);
+OK
+STAGE DEPENDENCIES:
+  Stage-4 is a root stage
+  Stage-3 depends on stages: Stage-4
+  Stage-0 depends on stages: Stage-3
+
+STAGE PLANS:
+  Stage: Stage-4
+    Map Reduce Local Work
+      Alias -> Map Local Tables:
+        c 
+          Fetch Operator
+            limit: -1
+      Alias -> Map Local Operator Tree:
+        c 
+          TableScan
+            alias: c
+            Statistics: Num rows: 4674 Data size: 953525 Basic stats: COMPLETE Column stats: NONE
+            HashTable Sink Operator
+              keys:
+                0 customer_id (type: int)
+                1 order_customer_id (type: int)
+
+  Stage: Stage-3
+    Map Reduce
+      Map Operator Tree:
+          TableScan
+            alias: o
+            Statistics: Num rows: 14705 Data size: 2999944 Basic stats: COMPLETE Column stats: NONE
+            Map Join Operator
+              condition map:
+                   Right Outer Join0 to 1
+              keys:
+                0 customer_id (type: int)
+                1 order_customer_id (type: int)
+              outputColumnNames: _col0, _col1, _col2, _col7, _col9
+              Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+              Select Operator
+                expressions: _col0 (type: int), _col1 (type: string), _col2 (type: string), _col7 (type: string), _col9 (type: string)
+                outputColumnNames: _col0, _col1, _col2, _col3, _col4
+                Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+                File Output Operator
+                  compressed: false
+                  Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+                  table:
+                      input format: org.apache.hadoop.mapred.TextInputFormat
+                      output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                      serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+      Local Work:
+        Map Reduce Local Work
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        ListSink
+
+Time taken: 0.102 seconds, Fetched: 56 row(s)
+
+hive> explain select c.customer_id, c.customer_fname, c.customer_lname, o.order_date, o.order_status
+    > from customers c full outer join orders o
+    > on (c.customer_id = o.order_customer_id);
+OK
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Map Operator Tree:
+          TableScan
+            alias: c
+            Statistics: Num rows: 4674 Data size: 953525 Basic stats: COMPLETE Column stats: NONE
+            Reduce Output Operator
+              key expressions: customer_id (type: int)
+              sort order: +
+              Map-reduce partition columns: customer_id (type: int)
+              Statistics: Num rows: 4674 Data size: 953525 Basic stats: COMPLETE Column stats: NONE
+              value expressions: customer_fname (type: string), customer_lname (type: string)
+          TableScan
+            alias: o
+            Statistics: Num rows: 14705 Data size: 2999944 Basic stats: COMPLETE Column stats: NONE
+            Reduce Output Operator
+              key expressions: order_customer_id (type: int)
+              sort order: +
+              Map-reduce partition columns: order_customer_id (type: int)
+              Statistics: Num rows: 14705 Data size: 2999944 Basic stats: COMPLETE Column stats: NONE
+              value expressions: order_date (type: string), order_status (type: string)
+      Reduce Operator Tree:
+        Join Operator
+          condition map:
+               Outer Join 0 to 1
+          keys:
+            0 customer_id (type: int)
+            1 order_customer_id (type: int)
+          outputColumnNames: _col0, _col1, _col2, _col7, _col9
+          Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+          Select Operator
+            expressions: _col0 (type: int), _col1 (type: string), _col2 (type: string), _col7 (type: string), _col9 (type: string)
+            outputColumnNames: _col0, _col1, _col2, _col3, _col4
+            Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+            File Output Operator
+              compressed: false
+              Statistics: Num rows: 16175 Data size: 3299938 Basic stats: COMPLETE Column stats: NONE
+              table:
+                  input format: org.apache.hadoop.mapred.TextInputFormat
+                  output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                  serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        ListSink
+
+Time taken: 0.062 seconds, Fetched: 53 row(s)
+hive> create external table orders_buckt
+    > (order_id int, order_date string, order_customer_id int, order_status string)
+    > clustered by (order_customer_id) into 4 buckets
+    > row format delimited
+    > fields terminated by ',';
+OK
+Time taken: 0.128 seconds
+hive> select * from orders_buckt;
+OK
+Time taken: 0.083 seconds
+
+hive> insert overwrite table orders_buckt select * from orders;
+Query ID = cloudera_20200723125959_64b7187b-f3e8-4bdc-a815-3e17fb53e0b9
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595518542358_0007, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595518542358_0007/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595518542358_0007
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2020-07-23 12:59:10,655 Stage-1 map = 0%,  reduce = 0%
+2020-07-23 12:59:20,698 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 3.15 sec
+MapReduce Total cumulative CPU time: 3 seconds 150 msec
+Ended Job = job_1595518542358_0007
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/orders_buckt/.hive-staging_hive_2020-07-23_12-59-00_783_7635780134323930185-1/-ext-10000
+Loading data to table default.orders_buckt
+Table default.orders_buckt stats: [numFiles=1, numRows=68883, totalSize=2999944, rawDataSize=2931061]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 3.15 sec   HDFS Read: 3004416 HDFS Write: 3000028 SUCCESS
+Total MapReduce CPU Time Spent: 3 seconds 150 msec
+OK
+Time taken: 22.319 seconds
+hive> describe formatted orders_buckt;
+OK
+# col_name            	data_type           	comment             
+	 	 
+order_id            	int                 	                    
+order_date          	string              	                    
+order_customer_id   	int                 	                    
+order_status        	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Thu Jul 23 12:58:14 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/orders_buckt	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	true                
+	EXTERNAL            	TRUE                
+	numFiles            	1                   
+	numRows             	68883               
+	rawDataSize         	2931061             
+	totalSize           	2999944             
+	transient_lastDdlTime	1595534363          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	4                   	 
+Bucket Columns:     	[order_customer_id] 	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	,                   
+	serialization.format	,                   
+Time taken: 0.093 seconds, Fetched: 36 row(s)
+
+hive> create external table customers_buckt
+    > (customer_id int, customer_fname string, customer_lname string)
+    > clustered by (customer_id) into 2 buckets
+    > row format delimited
+    > fields terminated by ',';
+OK
+Time taken: 0.082 seconds
+hive> from customers insert overwrite table customers_buckt select *;
+Query ID = cloudera_20200723130909_4c18b0f5-9d3f-47f9-b2f9-c753016c07bd
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1595518542358_0008, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1595518542358_0008/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1595518542358_0008
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2020-07-23 13:09:52,554 Stage-1 map = 0%,  reduce = 0%
+2020-07-23 13:10:02,452 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 2.41 sec
+MapReduce Total cumulative CPU time: 2 seconds 410 msec
+Ended Job = job_1595518542358_0008
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to: hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_buckt/.hive-staging_hive_2020-07-23_13-09-41_984_4964011615327412756-1/-ext-10000
+Loading data to table default.customers_buckt
+Table default.customers_buckt stats: [numFiles=1, numRows=12435, totalSize=224151, rawDataSize=211716]
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 2.41 sec   HDFS Read: 957922 HDFS Write: 224237 SUCCESS
+Total MapReduce CPU Time Spent: 2 seconds 410 msec
+OK
+Time taken: 21.818 seconds
+hive> describe formatted customers_buckt;
+OK
+# col_name            	data_type           	comment             
+	 	 
+customer_id         	int                 	                    
+customer_fname      	string              	                    
+customer_lname      	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+Owner:              	cloudera            	 
+CreateTime:         	Thu Jul 23 13:09:03 PDT 2020	 
+LastAccessTime:     	UNKNOWN             	 
+Protect Mode:       	None                	 
+Retention:          	0                   	 
+Location:           	hdfs://quickstart.cloudera:8020/user/hive/warehouse/customers_buckt	 
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	true                
+	EXTERNAL            	TRUE                
+	numFiles            	1                   
+	numRows             	12435               
+	rawDataSize         	211716              
+	totalSize           	224151              
+	transient_lastDdlTime	1595535003          
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	2                   	 
+Bucket Columns:     	[customer_id]       	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	,                   
+	serialization.format	,                   
+Time taken: 0.098 seconds, Fetched: 35 row(s)
+
+hive> select * from customer_hive limit 10;
+OK
+1	Richard	Hernandez	Brownsville
+2	Mary	Barrett	Littleton
+3	Ann	Smith	Caguas
+4	Mary	Jones	San Marcos
+5	Robert	Hudson	Caguas
+6	Mary	Smith	Passaic
+7	Melissa	Wilcox	Caguas
+8	Megan	Smith	Lawrence
+9	Mary	Perez	Caguas
+10	Melissa	Smith	Stafford
+Time taken: 0.069 seconds, Fetched: 10 row(s)
+hive> 
+
+
+#############################################################################################################
+
+*************Conditional Functions*********************************
+create table customers
+(custId INT,custName STRING, custCity STRING)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ',';
+
+LOAD DATA LOCAL INPATH 'file:///home/navdeep_kaur_maan/customer' overwrite into table customers;
+
+######## If clause ##############
+Select *, if(custCity ='Delhi',"I live in Delhi","I live somewhere else") as city_text from customers
+
+######### case statement ###############
+
+select *,
+case custCity
+when 'Delhi' then "I live in Delhi"
+when 'Noida'  then "I live in Noida" 
+else "I am somewhere else"
+end as city_text
+from customers;
+
+##############################################################################################################################
+
+*******Hive Analysis*****************
+Select custCity,count(*)
+from customers
+group by custCity
+order by custCity;
+
+
+Select custCity,count(*)
+from customers
+group by custCity
+having count(*)>1
+order by custCity;
+
+Select custCity,count(*) as population,
+if (count(*) >1,"Its a big city","Its a small city") as city_text
+from customers
+group by custCity;
+
+Select min(custid),max(custid),sum(custid),avg(custid) from customers;
+
+##############################################################################################################################
+
+******** Sqoop with Hive ****************
+sqoop import \
+--connect jdbc:mysql://localhost/retail_db \
+--username root \
+--password admin123 \
+--table customers \
+--columns "customer_id,customer_fname,customer_lname,customer_city" \
+--hive-import \
+--create-hive-table \
+--hive-database default \
+--hive-table customer_hive
+
+create table customer_city as select customer_city,count(*) from customer_hive group by customer_city;
+
+Use retail_db;
+create table customer_city_result(
+customer_city VARCHAR(32),
+count INT);
+
+sqoop export \
+--connect jdbc:mysql://localhost/retail_db \
+--username root \
+--password admin123 \
+--table customer_city_result \
+--export-dir /user/hive/warehouse/customer_city \
+--input-fields-terminated-by '\001'
+
+##############################################################################################################################
+
+*********Flume with Hive **************
+Ingest data with Flume
+Create Hive schema on top of that
+
+##############################################################################################################################
+
+
+*******lateral views/explode***********
+Create external table movie
+(movie_Id INT,actors_name STRING,movie_name ARRAY<STRING>)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+COLLECTION ITEMS TERMINATED BY ':'
+LOCATION 'file:///home/navdeep_kaur_maan/movies/';
+
+Select actors_name,movie from movie lateral view explode(movie_name) tb2 as movie;
